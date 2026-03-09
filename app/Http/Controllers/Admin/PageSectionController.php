@@ -1,0 +1,97 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\PageSection;
+use App\Models\Page;
+use App\Models\ActivityLog;
+use Illuminate\Http\Request;
+
+class PageSectionController extends Controller
+{
+    public function create(Request $request)
+    {
+        $pageId = $request->get('page_id');
+        $page = Page::findOrFail($pageId);
+        return view('admin.page-sections.create', compact('page'));
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'page_id' => 'required|exists:pages,id',
+            'section_key' => 'required|string|max:255',
+            'title' => 'nullable|string|max:255',
+            'subtitle' => 'nullable|string|max:500',
+            'content' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'button_text' => 'nullable|string|max:100',
+            'button_link' => 'nullable|string|max:255',
+            'order' => 'nullable|integer',
+        ]);
+
+        // Handle checkbox - if not present, it means unchecked (false)
+        $validated['is_active'] = $request->has('is_active') ? 1 : 0;
+
+        if ($request->hasFile('image')) {
+            $validated['image'] = $request->file('image')->store('pages', 'public');
+        }
+
+        $section = PageSection::create($validated);
+        
+        ActivityLog::log('created', "Created page section: {$section->section_key}", PageSection::class, $section->id);
+
+        return redirect()->route('admin.pages.edit', $validated['page_id'])
+            ->with('success', 'Page section created successfully.');
+    }
+
+    public function edit(PageSection $pageSection)
+    {
+        $page = $pageSection->page;
+        return view('admin.page-sections.edit', compact('pageSection', 'page'));
+    }
+
+    public function update(Request $request, PageSection $pageSection)
+    {
+        $validated = $request->validate([
+            'section_key' => 'required|string|max:255',
+            'title' => 'nullable|string|max:255',
+            'subtitle' => 'nullable|string|max:500',
+            'content' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'button_text' => 'nullable|string|max:100',
+            'button_link' => 'nullable|string|max:255',
+            'order' => 'nullable|integer',
+        ]);
+
+        // Handle checkbox - if not present, it means unchecked (false)
+        $validated['is_active'] = $request->has('is_active') ? 1 : 0;
+
+        // Handle image upload - only update if new image is provided
+        if ($request->hasFile('image')) {
+            $validated['image'] = $request->file('image')->store('pages', 'public');
+        } else {
+            // Remove image from validated array to keep existing image
+            unset($validated['image']);
+        }
+
+        $pageSection->update($validated);
+        
+        ActivityLog::log('updated', "Updated page section: {$pageSection->section_key}", PageSection::class, $pageSection->id);
+
+        return redirect()->route('admin.pages.edit', $pageSection->page_id)
+            ->with('success', 'Page section updated successfully.');
+    }
+
+    public function destroy(PageSection $pageSection)
+    {
+        $pageId = $pageSection->page_id;
+        $pageSection->delete();
+        
+        ActivityLog::log('deleted', "Deleted page section", PageSection::class, $pageSection->id);
+
+        return redirect()->route('admin.pages.edit', $pageId)
+            ->with('success', 'Page section deleted successfully.');
+    }
+}
