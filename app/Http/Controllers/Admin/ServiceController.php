@@ -5,11 +5,19 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Service;
 use App\Models\ActivityLog;
+use App\Services\ImageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
 
 class ServiceController extends Controller
 {
+    protected $imageService;
+
+    public function __construct(ImageService $imageService)
+    {
+        $this->imageService = $imageService;
+    }
     public function index()
     {
         $services = Service::orderBy('order')->paginate(20);
@@ -44,10 +52,19 @@ class ServiceController extends Controller
         }
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('services', 'public');
+            $result = $this->imageService->uploadAndOptimize(
+                $request->file('image'),
+                'services',
+                ['max_width' => 1200, 'thumbnail' => false]
+            );
+            $validated['image'] = $result['path'];
         }
 
         $service = Service::create($validated);
+        
+        // Clear service caches
+        Cache::forget('services.list');
+        Cache::forget('home.featured_services');
         
         ActivityLog::log('created', "Created service: {$service->title}", Service::class, $service->id);
 
@@ -80,13 +97,29 @@ class ServiceController extends Controller
 
         // Handle image upload - only update if new file uploaded
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('services', 'public');
+            // Delete old image
+            if ($service->image) {
+                $this->imageService->deleteImage($service->image);
+            }
+            
+            $result = $this->imageService->uploadAndOptimize(
+                $request->file('image'),
+                'services',
+                ['max_width' => 1200, 'thumbnail' => false]
+            );
+            $validated['image'] = $result['path'];
         } else {
             // Don't overwrite existing image with null
             unset($validated['image']);
         }
 
         $service->update($validated);
+        
+        // Clear service caches
+        Cache::forget('services.list');
+        Cache::forget('home.featured_services');
+        Cache::forget("service.{$service->slug}");
+        Cache::forget("service.{$service->slug}.related");
         
         ActivityLog::log('updated', "Updated service: {$service->title}", Service::class, $service->id);
 
@@ -97,7 +130,14 @@ class ServiceController extends Controller
     public function destroy(Service $service)
     {
         $title = $service->title;
+        $slug = $service->slug;
         $service->delete();
+        
+        // Clear service caches
+        Cache::forget('services.list');
+        Cache::forget('home.featured_services');
+        Cache::forget("service.{$slug}");
+        Cache::forget("service.{$slug}.related");
         
         ActivityLog::log('deleted', "Deleted service: {$title}", Service::class, $service->id);
 

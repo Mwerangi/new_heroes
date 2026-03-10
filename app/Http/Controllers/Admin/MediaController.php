@@ -4,11 +4,18 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Media;
+use App\Services\ImageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class MediaController extends Controller
 {
+    protected $imageService;
+
+    public function __construct(ImageService $imageService)
+    {
+        $this->imageService = $imageService;
+    }
     public function index(Request $request)
     {
         $query = Media::with('uploader')->orderBy('created_at', 'desc');
@@ -29,13 +36,24 @@ class MediaController extends Controller
         ]);
 
         $file = $request->file('file');
-        $path = $file->store('media', 'public');
         
         $type = 'document';
         if (Str::startsWith($file->getMimeType(), 'image/')) {
             $type = 'image';
         } elseif (Str::startsWith($file->getMimeType(), 'video/')) {
             $type = 'video';
+        }
+
+        // Optimize images, store other files normally
+        if ($type === 'image') {
+            $result = $this->imageService->uploadAndOptimize(
+                $file,
+                'media',
+                ['max_width' => 1920, 'thumbnail' => false]
+            );
+            $path = $result['path'];
+        } else {
+            $path = $file->store('media', 'public');
         }
 
         $media = Media::create([

@@ -72,7 +72,10 @@ class ProcessStepSeeder extends Seeder
         ];
 
         foreach ($steps as $step) {
-            ProcessStep::create($step);
+            ProcessStep::updateOrCreate(
+                ['step_number' => $step['step_number']],
+                $step
+            );
         }
     }
 }

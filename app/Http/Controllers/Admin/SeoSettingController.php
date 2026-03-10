@@ -5,10 +5,17 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\SeoSetting;
 use App\Models\ActivityLog;
+use App\Services\ImageService;
 use Illuminate\Http\Request;
 
 class SeoSettingController extends Controller
 {
+    protected $imageService;
+
+    public function __construct(ImageService $imageService)
+    {
+        $this->imageService = $imageService;
+    }
     public function index()
     {
         $pages = ['home', 'about', 'services', 'gallery', 'blog', 'contact'];
@@ -35,7 +42,18 @@ class SeoSettingController extends Controller
         ]);
 
         if ($request->hasFile('og_image')) {
-            $validated['og_image'] = $request->file('og_image')->store('seo', 'public');
+            // Delete old OG image if exists
+            $existingSetting = SeoSetting::where('page', $validated['page'])->first();
+            if ($existingSetting && $existingSetting->og_image) {
+                $this->imageService->deleteImage($existingSetting->og_image);
+            }
+            
+            $result = $this->imageService->uploadAndOptimize(
+                $request->file('og_image'),
+                'seo',
+                ['max_width' => 1200, 'max_height' => 630, 'thumbnail' => false]
+            );
+            $validated['og_image'] = $result['path'];
         }
 
         $seoSetting = SeoSetting::updateOrCreate(

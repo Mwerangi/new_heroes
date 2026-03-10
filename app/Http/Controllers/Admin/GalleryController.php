@@ -6,10 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Models\Gallery;
 use App\Models\GalleryCategory;
 use App\Models\ActivityLog;
+use App\Services\ImageService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class GalleryController extends Controller
 {
+    protected $imageService;
+
+    public function __construct(ImageService $imageService)
+    {
+        $this->imageService = $imageService;
+    }
     public function index(Request $request)
     {
         $query = Gallery::with('category')->orderBy('order');
@@ -42,12 +50,20 @@ class GalleryController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('gallery', 'public');
-            // You can generate thumbnail here using intervention/image
-            $validated['thumbnail'] = $validated['image']; // For now, same as image
+            $result = $this->imageService->uploadAndOptimize(
+                $request->file('image'),
+                'gallery',
+                ['thumbnail' => true, 'thumbnail_width' => 400, 'thumbnail_height' => 400]
+            );
+            $validated['image'] = $result['path'];
+            $validated['thumbnail'] = $result['thumbnail'];
         }
 
         $gallery = Gallery::create($validated);
+        
+        // Clear gallery caches
+        Cache::forget('gallery.categories');
+        Cache::forget('home.gallery_preview');
         
         ActivityLog::log('created', "Uploaded gallery image: {$gallery->title}", Gallery::class, $gallery->id);
 
@@ -73,11 +89,25 @@ class GalleryController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('gallery', 'public');
-            $validated['thumbnail'] = $validated['image'];
+            // Delete old images
+            if ($gallery->image) {
+                $this->imageService->deleteImage($gallery->image, $gallery->thumbnail);
+            }
+            
+            $result = $this->imageService->uploadAndOptimize(
+                $request->file('image'),
+                'gallery',
+                ['thumbnail' => true, 'thumbnail_width' => 400, 'thumbnail_height' => 400]
+            );
+            $validated['image'] = $result['path'];
+            $validated['thumbnail'] = $result['thumbnail'];
         }
 
         $gallery->update($validated);
+        
+        // Clear gallery caches
+        Cache::forget('gallery.categories');
+        Cache::forget('home.gallery_preview');
         
         ActivityLog::log('updated', "Updated gallery image: {$gallery->title}", Gallery::class, $gallery->id);
 
@@ -89,6 +119,10 @@ class GalleryController extends Controller
     {
         $title = $gallery->title;
         $gallery->delete();
+        
+        // Clear gallery caches
+        Cache::forget('gallery.categories');
+        Cache::forget('home.gallery_preview');
         
         ActivityLog::log('deleted', "Deleted gallery image: {$title}", Gallery::class, $gallery->id);
 

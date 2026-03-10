@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Inquiry;
+use App\Models\User;
+use App\Notifications\NewInquiryNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 
 class QuoteController extends Controller
 {
@@ -32,7 +35,13 @@ class QuoteController extends Controller
             $validated['attachment'] = $path;
         }
 
-        Inquiry::create($validated);
+        $inquiry = Inquiry::create($validated);
+
+        // Send email notification to admin users
+        $admins = User::role('super-admin')->where('is_active', true)->get();
+        if ($admins->count() > 0) {
+            Notification::send($admins, new NewInquiryNotification($inquiry));
+        }
 
         return back()->with('success', 'Your quote request has been submitted successfully. We will contact you shortly!');
     }

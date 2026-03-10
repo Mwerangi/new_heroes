@@ -19,6 +19,9 @@ class DatabaseSeeder extends Seeder
             ProcessStepSeeder::class,
             ContactInformationSeeder::class,
             SiteSettingSeeder::class,
+            SeoSettingSeeder::class,
+            GalleryCategorySeeder::class,
+            TestimonialSeeder::class,
             BlogPostsSeeder::class,
         ]);
     }

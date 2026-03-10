@@ -46,10 +46,10 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-[1600px] mx-auto">
                 @foreach($galleries as $gallery)
                     <div class="group relative overflow-hidden rounded-2xl shadow-sm border border-gray-100 hover:shadow-2xl transition-all duration-300 cursor-pointer"
-                        onclick="openModal('{{ asset('storage/' . $gallery->image_path) }}', '{{ addslashes($gallery->title ?? '') }}', '{{ addslashes($gallery->description ?? '') }}', '{{ addslashes($gallery->category?->name ?? '') }}')">
+                        onclick="openModal('{{ asset('storage/' . $gallery->image) }}', '{{ addslashes($gallery->title ?? '') }}', '{{ addslashes($gallery->caption ?? '') }}', '{{ addslashes($gallery->category?->name ?? '') }}')">
                         <!-- Image -->
                         <div class="aspect-[4/3] overflow-hidden bg-gray-100">
-                            <img src="{{ asset('storage/' . $gallery->image_path) }}" 
+                            <img src="{{ asset('storage/' . $gallery->image) }}" 
                                 alt="{{ $gallery->title }}" 
                                 loading="lazy"
                                 class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">

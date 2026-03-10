@@ -417,7 +417,10 @@ class BlogPostsSeeder extends Seeder
                 $existingPost->update($postData);
                 $this->command->info("✓ Updated blog post: {$postData['title']}");
             } else {
-                BlogPost::create($postData);
+                BlogPost::updateOrCreate(
+                    ['slug' => $postData['slug']],
+                    $postData
+                );
                 $this->command->info("✓ Created blog post: {$postData['title']}");
             }
         }

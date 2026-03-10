@@ -6,10 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Models\BlogPost;
 use App\Models\BlogCategory;
 use App\Models\ActivityLog;
+use App\Services\ImageService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class BlogPostController extends Controller
 {
+    protected $imageService;
+
+    public function __construct(ImageService $imageService)
+    {
+        $this->imageService = $imageService;
+    }
     public function index()
     {
         $posts = BlogPost::with(['category', 'author'])
@@ -53,6 +61,10 @@ class BlogPostController extends Controller
 
         $post = BlogPost::create($validated);
         
+        // Clear blog caches
+        Cache::forget('blog.categories');
+        Cache::forget('home.latest_posts');
+        
         ActivityLog::log('created', "Created blog post: {$post->title}", BlogPost::class, $post->id);
 
         return redirect()->route('admin.blog-posts.index')
@@ -83,10 +95,24 @@ class BlogPostController extends Controller
         ]);
 
         if ($request->hasFile('featured_image')) {
-            $validated['featured_image'] = $request->file('featured_image')->store('blog', 'public');
+            // Delete old image
+            if ($blogPost->featured_image) {
+                $this->imageService->deleteImage($blogPost->featured_image);
+            }
+            
+            $result = $this->imageService->uploadAndOptimize(
+                $request->file('featured_image'),
+                'blog',
+                ['max_width' => 1200, 'thumbnail' => false]
+            );
+            $validated['featured_image'] = $result['path'];
         }
 
         $blogPost->update($validated);
+        
+        // Clear blog caches
+        Cache::forget('blog.categories');
+        Cache::forget('home.latest_posts');
         
         ActivityLog::log('updated', "Updated blog post: {$blogPost->title}", BlogPost::class, $blogPost->id);
 
@@ -98,6 +124,10 @@ class BlogPostController extends Controller
     {
         $title = $blogPost->title;
         $blogPost->delete();
+        
+        // Clear blog caches
+        Cache::forget('blog.categories');
+        Cache::forget('home.latest_posts');
         
         ActivityLog::log('deleted', "Deleted blog post: {$title}", BlogPost::class, $blogPost->id);
 

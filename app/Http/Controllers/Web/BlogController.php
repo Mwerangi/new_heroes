@@ -6,12 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\BlogPost;
 use App\Models\BlogCategory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class BlogController extends Controller
 {
     public function index(Request $request)
     {
-        $categories = BlogCategory::active()->withCount('publishedPosts')->get();
+        // Cache blog categories for 1 hour
+        $categories = Cache::remember('blog.categories', 3600, function () {
+            return BlogCategory::active()->withCount('publishedPosts')->get();
+        });
         
         $query = BlogPost::published()->latest();
         

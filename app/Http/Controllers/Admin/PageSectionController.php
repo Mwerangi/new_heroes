@@ -6,10 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Models\PageSection;
 use App\Models\Page;
 use App\Models\ActivityLog;
+use App\Services\ImageService;
 use Illuminate\Http\Request;
 
 class PageSectionController extends Controller
 {
+    protected $imageService;
+
+    public function __construct(ImageService $imageService)
+    {
+        $this->imageService = $imageService;
+    }
     public function create(Request $request)
     {
         $pageId = $request->get('page_id');
@@ -35,7 +42,12 @@ class PageSectionController extends Controller
         $validated['is_active'] = $request->has('is_active') ? 1 : 0;
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('pages', 'public');
+            $result = $this->imageService->uploadAndOptimize(
+                $request->file('image'),
+                'pages',
+                ['max_width' => 1200, 'thumbnail' => false]
+            );
+            $validated['image'] = $result['path'];
         }
 
         $section = PageSection::create($validated);
@@ -70,7 +82,17 @@ class PageSectionController extends Controller
 
         // Handle image upload - only update if new image is provided
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('pages', 'public');
+            // Delete old image
+            if ($pageSection->image) {
+                $this->imageService->deleteImage($pageSection->image);
+            }
+            
+            $result = $this->imageService->uploadAndOptimize(
+                $request->file('image'),
+                'pages',
+                ['max_width' => 1200, 'thumbnail' => false]
+            );
+            $validated['image'] = $result['path'];
         } else {
             // Remove image from validated array to keep existing image
             unset($validated['image']);

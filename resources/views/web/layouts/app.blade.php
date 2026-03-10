@@ -3,9 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="@yield('meta_description', 'New Heroes International Limited - Professional Clearing and Forwarding Services in Tanzania')">
-    <meta name="keywords" content="@yield('meta_keywords', 'clearing, forwarding, logistics, cargo, Tanzania, Dar es Salaam')">
-    <title>@yield('title', 'Home') - New Heroes International Limited</title>
+    
+    <!-- SEO Meta Tags -->
+    <title>@yield('title', \App\Helpers\SeoHelper::getMetaTitle(request()->segment(1) ?: 'home'))</title>
+    <meta name="description" content="@yield('meta_description', \App\Helpers\SeoHelper::getMetaDescription(request()->segment(1) ?: 'home', 'New Heroes International Limited - Professional Clearing and Forwarding Services in Tanzania'))">
+    <meta name="keywords" content="@yield('meta_keywords', \App\Helpers\SeoHelper::getMetaKeywords(request()->segment(1) ?: 'home', 'clearing, forwarding, logistics, cargo, Tanzania, Dar es Salaam'))">
+    <link rel="canonical" href="{{ \App\Helpers\SeoHelper::getCanonicalUrl(request()->segment(1) ?: 'home') }}">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:title" content="@yield('og_title', \App\Helpers\SeoHelper::getOgTitle(request()->segment(1) ?: 'home'))">
+    <meta property="og:description" content="@yield('og_description', \App\Helpers\SeoHelper::getOgDescription(request()->segment(1) ?: 'home'))">
+    @if(\App\Helpers\SeoHelper::getOgImage(request()->segment(1) ?: 'home'))
+        <meta property="og:image" content="{{ \App\Helpers\SeoHelper::getOgImage(request()->segment(1) ?: 'home') }}">
+    @endif
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="{{ url()->current() }}">
+    <meta property="twitter:title" content="@yield('og_title', \App\Helpers\SeoHelper::getOgTitle(request()->segment(1) ?: 'home'))">
+    <meta property="twitter:description" content="@yield('og_description', \App\Helpers\SeoHelper::getOgDescription(request()->segment(1) ?: 'home'))">
+    @if(\App\Helpers\SeoHelper::getOgImage(request()->segment(1) ?: 'home'))
+        <meta property="twitter:image" content="{{ \App\Helpers\SeoHelper::getOgImage(request()->segment(1) ?: 'home') }}">
+    @endif
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>

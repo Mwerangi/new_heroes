@@ -14,32 +14,38 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         // Create Super Admin
-        $admin = User::create([
-            'name' => 'Super Admin',
-            'email' => 'admin@newheroesintl.com',
-            'password' => Hash::make('password'),
-            'phone' => '+255625544404',
-            'is_active' => true,
-        ]);
-        $admin->assignRole('super-admin');
+        $admin = User::updateOrCreate(
+            ['email' => 'admin@newheroesintl.com'],
+            [
+                'name' => 'Super Admin',
+                'password' => Hash::make('password'),
+                'phone' => '+255625544404',
+                'is_active' => true,
+            ]
+        );
+        $admin->syncRoles(['super-admin']);
 
         // Create Content Manager
-        $manager = User::create([
-            'name' => 'Content Manager',
-            'email' => 'manager@newheroesintl.com',
-            'password' => Hash::make('password'),
-            'phone' => '+255742058897',
-            'is_active' => true,
-        ]);
-        $manager->assignRole('content-manager');
+        $manager = User::updateOrCreate(
+            ['email' => 'manager@newheroesintl.com'],
+            [
+                'name' => 'Content Manager',
+                'password' => Hash::make('password'),
+                'phone' => '+255742058897',
+                'is_active' => true,
+            ]
+        );
+        $manager->syncRoles(['content-manager']);
 
         // Create Editor
-        $editor = User::create([
-            'name' => 'Editor',
-            'email' => 'editor@newheroesintl.com',
-            'password' => Hash::make('password'),
-            'is_active' => true,
-        ]);
-        $editor->assignRole('editor');
+        $editor = User::updateOrCreate(
+            ['email' => 'editor@newheroesintl.com'],
+            [
+                'name' => 'Editor',
+                'password' => Hash::make('password'),
+                'is_active' => true,
+            ]
+        );
+        $editor->syncRoles(['editor']);
     }
 }

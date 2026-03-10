@@ -5,10 +5,18 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Testimonial;
 use App\Models\ActivityLog;
+use App\Services\ImageService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class TestimonialController extends Controller
 {
+    protected $imageService;
+
+    public function __construct(ImageService $imageService)
+    {
+        $this->imageService = $imageService;
+    }
     public function index()
     {
         $testimonials = Testimonial::orderBy('order')->paginate(20);
@@ -35,14 +43,28 @@ class TestimonialController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('testimonials', 'public');
+            $result = $this->imageService->uploadAndOptimize(
+                $request->file('image'),
+                'testimonials',
+                ['max_width' => 800, 'thumbnail' => false]
+            );
+            $validated['image'] = $result['path'];
         }
 
         if ($request->hasFile('logo')) {
-            $validated['logo'] = $request->file('logo')->store('testimonials/logos', 'public');
+            $result = $this->imageService->uploadAndOptimize(
+                $request->file('logo'),
+                'testimonials/logos',
+                ['max_width' => 400, 'thumbnail' => false]
+            );
+            $validated['logo'] = $result['path'];
         }
 
         $testimonial = Testimonial::create($validated);
+        
+        // Clear testimonial caches
+        Cache::forget('testimonials.list');
+        Cache::forget('home.testimonials');
         
         ActivityLog::log('created', "Created testimonial from: {$testimonial->client_name}", Testimonial::class, $testimonial->id);
 
@@ -70,14 +92,38 @@ class TestimonialController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('testimonials', 'public');
+            // Delete old image
+            if ($testimonial->image) {
+                $this->imageService->deleteImage($testimonial->image);
+            }
+            
+            $result = $this->imageService->uploadAndOptimize(
+                $request->file('image'),
+                'testimonials',
+                ['max_width' => 800, 'thumbnail' => false]
+            );
+            $validated['image'] = $result['path'];
         }
 
         if ($request->hasFile('logo')) {
-            $validated['logo'] = $request->file('logo')->store('testimonials/logos', 'public');
+            // Delete old logo
+            if ($testimonial->logo) {
+                $this->imageService->deleteImage($testimonial->logo);
+            }
+            
+            $result = $this->imageService->uploadAndOptimize(
+                $request->file('logo'),
+                'testimonials/logos',
+                ['max_width' => 400, 'thumbnail' => false]
+            );
+            $validated['logo'] = $result['path'];
         }
 
         $testimonial->update($validated);
+        
+        // Clear testimonial caches
+        Cache::forget('testimonials.list');
+        Cache::forget('home.testimonials');
         
         ActivityLog::log('updated', "Updated testimonial from: {$testimonial->client_name}", Testimonial::class, $testimonial->id);
 
@@ -89,6 +135,10 @@ class TestimonialController extends Controller
     {
         $name = $testimonial->client_name;
         $testimonial->delete();
+        
+        // Clear testimonial caches
+        Cache::forget('testimonials.list');
+        Cache::forget('home.testimonials');
         
         ActivityLog::log('deleted', "Deleted testimonial from: {$name}", Testimonial::class, $testimonial->id);
 

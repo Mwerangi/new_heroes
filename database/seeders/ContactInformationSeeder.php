@@ -97,7 +97,10 @@ class ContactInformationSeeder extends Seeder
         ];
 
         foreach ($contacts as $contact) {
-            ContactInformation::create($contact);
+            ContactInformation::updateOrCreate(
+                ['key' => $contact['key']],
+                $contact
+            );
         }
     }
 }

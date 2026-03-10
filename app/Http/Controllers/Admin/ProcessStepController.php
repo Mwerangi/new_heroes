@@ -5,10 +5,17 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ProcessStep;
 use App\Models\ActivityLog;
+use App\Services\ImageService;
 use Illuminate\Http\Request;
 
 class ProcessStepController extends Controller
 {
+    protected $imageService;
+
+    public function __construct(ImageService $imageService)
+    {
+        $this->imageService = $imageService;
+    }
     public function index()
     {
         $steps = ProcessStep::orderBy('order')->paginate(20);
@@ -33,7 +40,12 @@ class ProcessStepController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('process-steps', 'public');
+            $result = $this->imageService->uploadAndOptimize(
+                $request->file('image'),
+                'process-steps',
+                ['max_width' => 800, 'thumbnail' => false]
+            );
+            $validated['image'] = $result['path'];
         }
 
         $step = ProcessStep::create($validated);
@@ -62,7 +74,17 @@ class ProcessStepController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('process-steps', 'public');
+            // Delete old image
+            if ($processStep->image) {
+                $this->imageService->deleteImage($processStep->image);
+            }
+            
+            $result = $this->imageService->uploadAndOptimize(
+                $request->file('image'),
+                'process-steps',
+                ['max_width' => 800, 'thumbnail' => false]
+            );
+            $validated['image'] = $result['path'];
         }
 
         $processStep->update($validated);

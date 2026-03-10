@@ -31,15 +31,15 @@ class RoleAndPermissionSeeder extends Seeder
         ];
 
         foreach ($permissions as $permission) {
-            Permission::create(['name' => $permission]);
+            Permission::firstOrCreate(['name' => $permission]);
         }
 
         // Create roles and assign permissions
-        $superAdmin = Role::create(['name' => 'super-admin']);
-        $superAdmin->givePermissionTo(Permission::all());
+        $superAdmin = Role::firstOrCreate(['name' => 'super-admin']);
+        $superAdmin->syncPermissions(Permission::all());
 
-        $contentManager = Role::create(['name' => 'content-manager']);
-        $contentManager->givePermissionTo([
+        $contentManager = Role::firstOrCreate(['name' => 'content-manager']);
+        $contentManager->syncPermissions([
             'manage pages',
             'manage services',
             'manage gallery',
@@ -47,8 +47,8 @@ class RoleAndPermissionSeeder extends Seeder
             'manage testimonials',
         ]);
 
-        $editor = Role::create(['name' => 'editor']);
-        $editor->givePermissionTo([
+        $editor = Role::firstOrCreate(['name' => 'editor']);
+        $editor->syncPermissions([
             'manage pages',
             'manage blog',
         ]);

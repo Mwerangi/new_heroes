@@ -24,7 +24,7 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Current Image</label>
-                        <img src="{{ asset('storage/' . $gallery->image_path) }}" alt="{{ $gallery->title }}" class="w-full max-w-md rounded-lg shadow-md">
+                        <img src="{{ asset('storage/' . $gallery->image) }}" alt="{{ $gallery->title }}" class="w-full max-w-md rounded-lg shadow-md">
                     </div>
 
                     <div>
